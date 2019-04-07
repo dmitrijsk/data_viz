@@ -14,10 +14,16 @@ coord_radar <- function (theta = "x", start = 0, direction = 1) {
           is_linear = function(coord) TRUE)
 }
 
+# COLOURS_OVERALL <- c("Top Five" = "#00787E", 
+#                      "Above Average" = "#1DA7AA",
+#                      "Average" = "grey90", # originally "#91C6BE"
+#                      "Below Average" = "grey90", # originally "#EC9247"
+#                      "Bottom Five" = "#E3643B")
+
 COLOURS_OVERALL <- c("Top Five" = "#00787E", 
                      "Above Average" = "#1DA7AA",
                      "Average" = "grey90", # originally "#91C6BE"
-                     "Below Average" = "#EC9247",
+                     "Below Average" = "grey90", # originally "#EC9247"
                      "Bottom Five" = "#E3643B")
 
 # Get data.
@@ -35,35 +41,37 @@ rankings <- states_orig %>%
          State = reorder(State, overallrank)) %>% 
   select(State, C = cashrank, L = Lrrank, B = budgetrank, S = servicelvlrank, T = trustrank, overallrank, State_with_rank)
 
-rankings_with_range <- bind_cols(
-  rankings,
-  rankings %>% 
-    rowwise() %>% 
-    summarize(min = min(C, L, B, S, T),
-              max = max(C, L, B, S, T),
-              range = max - min) %>% 
-    ungroup()) %>% 
+rankings_with_mad <- rankings %>% 
+  left_join(rankings %>% 
+              select(State:T) %>% 
+              gather(key, value, -State) %>% 
+              group_by(State) %>% 
+              summarize(mean_abs_dev = mean(abs(value - mean(value)))),
+            by = "State") %>% 
   arrange(overallrank)
 
 # Range of ranking by 5 dimensions.
-rankings_with_range %>% 
-  mutate(State = reorder(State, -range)) %>% 
-  ggplot(aes(x = State, y = range, fill = case_when(overallrank %in% 1:5 ~ "Top Five",
+rankings_with_mad %>% 
+  # filter(overallrank %in% c(1:5, 46:50)) %>% 
+  mutate(State = reorder(State, -mean_abs_dev)) %>% 
+  ggplot(aes(x = State, y = mean_abs_dev, fill = case_when(overallrank %in% 1:5 ~ "Top Five",
                                                     overallrank %in% 6:17 ~ "Above Average",
                                                     overallrank %in% 18:32 ~ "Average",
                                                     overallrank %in% 33:45 ~ "Below Average",
                                                     TRUE ~ "Bottom Five"))) +
   geom_col() +
-  scale_y_continuous(breaks = seq(0, 50, by = 10), labels = c("0\n(Best)", "10", "20", "30", "40", "50\n(Worst)"), expand = c(0, 0, 0, 30)) +
+  scale_y_continuous(breaks = seq(0, 20, by = 10), expand = c(0, 0, 0, 20)) +
   scale_fill_manual(limits = names(COLOURS_OVERALL), values = COLOURS_OVERALL) +
   coord_flip() +
   theme_classic() +
   theme(legend.position = "top") +
   theme(panel.grid.major.x = element_line(colour = "grey90", linetype = "dashed"), 
         axis.ticks.y = element_blank()) +
-  labs(fill = "Overall fiscal ranking of the states:", y = "Range in rankings among five dimensions of solvency", x = NULL) +
-  annotate(y = 52, x = 48, geom = "text", label = "Uniform fiscal condition", hjust = 0, size = 7, colour = "grey30") +
-  annotate(y = 52, x = 3, geom = "text", label = "Volatile fiscal condition", hjust = 0, size = 7, colour = "grey30")
+  labs(fill = "Overall fiscal ranking of the states:", 
+       y = "Mean absolute deviation in rankings by five dimensions of solvency", 
+       x = NULL) +
+  annotate(y = 25, x = 48, geom = "text", label = "Uniform fiscal condition", hjust = 0, size = 7, colour = "grey30") +
+  annotate(y = 25, x = 3, geom = "text", label = "Volatile fiscal condition", hjust = 0, size = 7, colour = "grey30")
 
 ggsave(filename = "bars_five_dimensions.png", height = 30, width = 25, units = "cm", dpi = 150)
 
@@ -86,7 +94,7 @@ plot_radar <- function(group) {
     scale_y_continuous(breaks = NULL) +
     coord_radar() +
     geom_text_repel(size = 3, color = "grey30") +
-    facet_wrap(~State_with_rank, nrow = 1) +
+    facet_wrap(~State_with_rank, ncol = 5) +
     theme_light() +
     theme(axis.ticks.y = element_blank(), 
           axis.text.y  = element_blank(), 
@@ -104,6 +112,9 @@ plot_radar <- function(group) {
 
 plot_radar("Top Five")
 ggsave(filename = "radar_top_five.png", height = 8, width = 25, units = "cm", dpi = 150)
+
+plot_radar("Above Average")
+ggsave(filename = "radar_above_average.png", height = 8, width = 25, units = "cm", dpi = 150)
 
 plot_radar("Bottom Five")
 ggsave(filename = "radar_bottom_five.png", height = 8, width = 25, units = "cm", dpi = 150)
