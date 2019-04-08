@@ -61,9 +61,26 @@ rankings_with_mad <- rankings %>%
   arrange(overallrank) %>% 
   mutate(stability = case_when(overallrank > 10 ~ "other",
                                mean_abs_dev < 10 ~ "stable",
-                               TRUE ~ "volatile"))
+                               TRUE ~ "volatile"),
+         stability_rank = min_rank(mean_abs_dev))
 
 
+rankings_with_mad %>% 
+  ggplot(aes(x = overallrank, y = mean_abs_dev, label = State, color = mean_abs_dev)) +
+  geom_point(show.legend = FALSE) +
+  ggrepel::geom_text_repel(show.legend = FALSE) +
+  scale_y_continuous(limits = c(0, 25)) +
+  scale_color_gradient(low = "#f768a1", high = "#7a0177") +
+  theme_classic() +
+  labs(title = "Wyoming, ranked 6th of 50, has the most volatile overall fiscal rating",
+       subtitle = "Volatily measured by mean absolute deviation of five components from the overall rating",
+       x = "Overall fiscal rating", 
+       y = "Volatility in components of the overall rating",
+       caption = " Makeover in R by Dmitrijs Kass @dmitrijsk | Data source: Ranking the States by Fiscal, 2018 edition, Condition Mercatus Research") +
+  theme(plot.caption = element_text(hjust = 0, size = 8), 
+        text = element_text(colour = "grey30"))
+
+ggsave(filename = "images-raw/scatterplot.png", height = 7, width = 14)
 
 
 # Plot volatility of all states ----
