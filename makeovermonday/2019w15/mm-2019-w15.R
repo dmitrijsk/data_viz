@@ -1,11 +1,17 @@
 
-# Packages and functions.
+# MakeoverMonday, Week 15, 2019.
+# Original plot: https://www.mercatus.org/statefiscalrankings
+# MakeoverMonday Tweet: https://twitter.com/TriMyData/status/1114842772295622658
+# Data: http://www.makeovermonday.co.uk/data/
+
+
+# Packages and functions ----
 library(tidyverse)
 library(httr)
 library(readxl)
 library(ggrepel)
 
-# function provided by Erwan Le Pennec for the radar coord. 
+# Function provided by Erwan Le Pennec for the radar coord.
 coord_radar <- function (theta = "x", start = 0, direction = 1) {
   theta <- match.arg(theta, c("x", "y"))
   r <- if (theta == "x") "y" else "x"
@@ -16,23 +22,35 @@ coord_radar <- function (theta = "x", start = 0, direction = 1) {
 
 COLOURS_STABILITY <- c("stable" = "#1DA7AA", 
                        "volatile" = "#EC9247",
-                       "other" = "grey80")
+                       "other" = "grey90")
 
-# Get data.
+
+
+# Get data ----
 GET("https://query.data.world/s/43zkfzcdmvcgmp6bl3ju5kgwmxhnv6", write_disk(tf <- tempfile(fileext = ".xlsx")))
 states_orig <- read_excel(tf)
+write_delim(states_orig, path = "data/states.csv", delim = ";")
 
-# Explore data.
+
+
+
+# Explore data ----
 glimpse(states_orig)
 skimr::skim(states_orig)
 
-# Select rank columns.
+
+
+
+# Data transformation ----
+
+# Select columns of interest.
 rankings <- states_orig %>% 
   filter(Year == max(Year) & State != "Average") %>% 
   mutate(State_with_rank = paste(overallrank, State, sep = ". ") %>% reorder(., overallrank),
          State = reorder(State, overallrank)) %>% 
   select(State, C = cashrank, L = Lrrank, B = budgetrank, S = servicelvlrank, T = trustrank, overallrank, State_with_rank)
 
+# Calculate volatility.
 rankings_with_mad <- rankings %>% 
   left_join(rankings %>% 
               select(State:T, overallrank) %>% 
@@ -45,28 +63,35 @@ rankings_with_mad <- rankings %>%
                                mean_abs_dev < 10 ~ "stable",
                                TRUE ~ "volatile"))
 
-# Range of ranking by 5 dimensions.
+
+
+
+# Plot volatility of all states ----
 rankings_with_mad %>% 
-  # filter(overallrank %in% c(1:5, 46:50)) %>% 
   mutate(State = reorder(State, -mean_abs_dev)) %>% 
   ggplot(aes(x = State, y = mean_abs_dev, fill = stability)) +
   geom_col() +
-  scale_y_continuous(breaks = seq(0, 20, by = 10), expand = c(0, 0, 0, 20)) +
+  scale_y_continuous(breaks = seq(0, 20, by = 10), expand = c(0, 0, 0, 20), position = "right") +
   scale_fill_manual(limits = names(COLOURS_STABILITY), values = COLOURS_STABILITY) +
   coord_flip() +
   theme_classic() +
   theme(legend.position = "top") +
-  theme(panel.grid.major.x = element_line(colour = "grey90", linetype = "dashed"), 
-        axis.ticks.y = element_blank()) +
+  theme(panel.grid.major.x = element_line(colour = "grey70", linetype = "dashed"), 
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_text(hjust = 0), 
+        axis.text.x = element_text(colour = "grey30"), 
+        axis.title.x = element_text(colour = "grey30", hjust = 0)) +
   labs(fill = "Overall fiscal ranking of the states:", 
        y = "Volatility in five solvency rankings", 
        x = NULL) +
-  annotate(y = 25, x = 48, geom = "text", label = "Uniform fiscal condition", hjust = 0, size = 7, colour = "grey30") +
-  annotate(y = 25, x = 3, geom = "text", label = "Volatile fiscal condition", hjust = 0, size = 7, colour = "grey30")
+  annotate(y = 23, x = 48, geom = "text", label = "Uniform fiscal condition", hjust = 0, size = 5, colour = "grey30") +
+  annotate(y = 23, x = 3, geom = "text", label = "Volatile fiscal condition", hjust = 0, size = 5, colour = "grey30")
 
-ggsave(filename = "bars_dimensions_3_groups.png", height = 30, width = 25, units = "cm", dpi = 150)
+ggsave(filename = "images-raw/volatility_of_five_dimensions.png", height = 35, width = 25, units = "cm", dpi = 150)
 
-# Radar plot.
+
+
+# Radar plot for top 10 states ----
 rankings_with_mad %>% 
   filter(overallrank %in% 1:10) %>% 
   select(State_with_rank, C:T, stability) %>% 
@@ -92,5 +117,5 @@ rankings_with_mad %>%
   labs(x = NULL, 
        y = NULL)
 
-ggsave(filename = "radar_top_ten.png", height = 27, width = 15, units = "cm", dpi = 150)
+ggsave(filename = "images-raw/radar_top_ten.png", height = 33, width = 15, units = "cm", dpi = 150)
 

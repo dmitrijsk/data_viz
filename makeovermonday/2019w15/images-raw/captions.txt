@@ -1,0 +1,27 @@
+"Not All Overall Rankings Are Created Equal"
+- Dmitrijs Kass
+
+
+45b: "Not all overall ranking are created equal"
+32: Dmitrijs Kass
+
+30n: Overall fiscal rating is based on five equally-weighted dimensions of solvency: Trust fund, Cash, Long-run, Budget and Service-level. However, a single number cannot convey the volatility in dimension scores and may lead to over-optimistic or over-pessimistic conclusions. For example, Nebraska is ranked 1st, but it has the 37th of 50 worst Budget rating.
+To assess volatility of an overall ranking, I use a mean absolute deviation of five dimensional scores from the overall rating. 
+Volatility measure is used to split top 10 ranking states into two groups: Stable fiscal position Volatile fiscal position
+
+
+30n: Stable fiscal position
+30n: Volatile fiscal position
+
+40b: Top 10 States by Overall Rating
+30n: T - Trust fund, C - Cash, L - Long-run, B - Budget, S - Service-level
+
+40b: Stability of Fiscal Position
+
+
+30n: Stable fiscal position
+
+30n: Volatilie fiscal position
+
+
+20n: Makeover in R by Dmitrijs Kass @dmitrijsk | Data source: Ranking the States by Fiscal, 2018 edition, Condition Mercatus Research 
