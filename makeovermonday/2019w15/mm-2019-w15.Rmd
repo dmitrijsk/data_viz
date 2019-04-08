@@ -1,0 +1,7 @@
+---
+output: html_document
+---
+
+```{r echo = FALSE}
+knitr::include_graphics("mm-2019-w15-fiscal-rankings.png")
+```
