@@ -1,6 +1,8 @@
 ---
 title: 'MakeoverMonday 2019/W16'
-output: html_document
+output:
+  html_document:
+    css: style.css
 ---
 
 ```{r setup, include=FALSE}
@@ -29,6 +31,11 @@ contents_orig %>%
 words_orig <- readxl::read_excel("data/Info We Trust _ #MakeoverMonday.xlsx", sheet = "data")
 words_orig
 
+
+
+# Word transformations ----
+
+# Lemmatization.
 words <- words_orig %>% 
   left_join(contents_orig, by = "page") %>% 
   mutate(word_lemma = textstem::lemmatize_words(wordForm),
@@ -40,23 +47,18 @@ words <- words_orig %>%
 # https://drsimonj.svbtle.com/ordering-categories-within-ggplot2-facets
 
 
-# Lemmatized words.
+# View lemmatized words.
 words %>% 
   filter(wordForm != word_lemma) %>% 
   count(wordForm, word_lemma, sort = TRUE)
 
-# Transform "numb" back to "number".
+# Transform "numb" back to "number" (side effect of lemmatization).
 words <- words %>% 
   mutate(word_lemma = case_when(word_lemma == "numb" ~ "number", 
                                 word_lemma == "datum" ~ "data", 
                                 TRUE ~ word_lemma))
 
-
-
-
-
-# Word frequency by section.
-
+# Calculate TF-IDF (approx. as number of words in each section is unknown).
 sections_per_word <- words %>% 
   group_by(word_lemma) %>% 
   summarize(n_sections = n_distinct(section))
@@ -72,8 +74,6 @@ word_by_section <- words %>%
   left_join(words_in_sections, by = "section") %>% 
   mutate(idf = log(length(sections_vec) / n_sections, base = exp(1)),
          tf_idf = n / words_in_section * idf)
-
-
 
 
 # Plot word importance as characterized by TF-IDF.
@@ -99,7 +99,7 @@ p_tfidf <- top_10_tfidf %>%
   coord_flip() +
   theme_minimal() +
   labs(title = 'Importance of words in "Info We Trust" book sections',
-       subtitle = paste0("\n", str_wrap(subtitle_text, width = 160), "\n", collapse = ""),
+       subtitle = paste0("\n", str_wrap(subtitle_text, width = 150), "\n", collapse = ""),
        caption = "Makeover in R by Dmitrijs Kass @dmitrijsk | Data source: https://data.world/makeovermonday/2019w16",
        x = NULL, 
        y = NULL) +
@@ -109,19 +109,18 @@ p_tfidf <- top_10_tfidf %>%
         strip.text = element_text(colour = "white", face = "bold", size = 12), 
         axis.text = element_text(colour = "white"), 
         title = element_text(colour = "white", size = 15), 
-        plot.subtitle = element_text(colour = "white", size = 9),
+        plot.subtitle = element_text(colour = "white", size = 9.5),
         axis.text.x = element_blank(),
-        axis.text.y = element_text(hjust = 0, size = 10), 
+        axis.text.y = element_text(hjust = 0, size = 11), 
         plot.caption = element_text(size = 8, hjust = 0),
         panel.spacing.x = unit(2,"line"), 
         panel.spacing.y = unit(1.5,"line"))
 ```
 
-MakeoverMonday 2016/W16 focuses on the words in ["Info We Trust"](https://infowetrust.com/). The original viz is a [word cloud](https://twitter.com/TriMyData/status/1117386318391197698). Data is available [here](https://data.world/makeovermonday/2019w16).
+This week focuses on the words in RJ Andrew's book ["Info We Trust"](https://infowetrust.com/). The original viz is a [word cloud](https://twitter.com/TriMyData/status/1117386318391197698). Data is available [here](https://data.world/makeovermonday/2019w16). My makeover focuses on the importance of words in six sections of the book. Word importance may be useful in highlighting differences in the content of the book's sections. Data analysis and visualization was implemented in R. Code with explanations will be added later.
 
 <br>
 
 ```{r echo = FALSE, fig.align='left', fig.height=7, fig.width=10}
 p_tfidf
 ```
-
