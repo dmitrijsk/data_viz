@@ -1,0 +1,127 @@
+---
+title: 'MakeoverMonday 2019/W16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(glmnet)
+
+
+
+# Import contents ----
+
+contents_orig <- readxl::read_excel("data/Info We Trust _ #MakeoverMonday.xlsx", sheet = "contents")
+sections_vec <- unique(contents_orig$section)
+
+# Calculate a number of pages in each section of the book.
+contents_orig %>% 
+  group_by(section) %>% 
+  mutate(n_pages = max(page) - min(page)) %>% 
+  distinct(section, n_pages)
+
+
+
+# Import words ----
+
+words_orig <- readxl::read_excel("data/Info We Trust _ #MakeoverMonday.xlsx", sheet = "data")
+words_orig
+
+words <- words_orig %>% 
+  left_join(contents_orig, by = "page") %>% 
+  mutate(word_lemma = textstem::lemmatize_words(wordForm),
+         section = factor(section, 
+                          levels = sections_vec, 
+                          labels = paste(1:length(sections_vec), sections_vec, sep = ". ")))
+
+# Thanks to Simon Jackson @drsimonj for sharing the code for ordering categories within facets.
+# https://drsimonj.svbtle.com/ordering-categories-within-ggplot2-facets
+
+
+# Lemmatized words.
+words %>% 
+  filter(wordForm != word_lemma) %>% 
+  count(wordForm, word_lemma, sort = TRUE)
+
+# Transform "numb" back to "number".
+words <- words %>% 
+  mutate(word_lemma = case_when(word_lemma == "numb" ~ "number", 
+                                word_lemma == "datum" ~ "data", 
+                                TRUE ~ word_lemma))
+
+
+
+
+
+# Word frequency by section.
+
+sections_per_word <- words %>% 
+  group_by(word_lemma) %>% 
+  summarize(n_sections = n_distinct(section))
+
+words_in_sections <- words %>% 
+  group_by(section) %>% 
+  summarize(words_in_section = n())
+
+word_by_section <- words %>% 
+  count(section, word_lemma) %>% 
+  arrange(section, desc(n)) %>% 
+  left_join(sections_per_word, by = "word_lemma") %>% 
+  left_join(words_in_sections, by = "section") %>% 
+  mutate(idf = log(length(sections_vec) / n_sections, base = exp(1)),
+         tf_idf = n / words_in_section * idf)
+
+
+
+
+# Plot word importance as characterized by TF-IDF.
+
+top_10_tfidf <- word_by_section %>% 
+  group_by(section) %>% 
+  arrange(desc(tf_idf)) %>% 
+  slice(1:10) %>% 
+  ungroup() %>% 
+  # Arrange by facet and word frequency.
+  arrange(section, tf_idf) %>% 
+  # Add order column of row numbers
+  mutate(order = row_number())
+
+subtitle_text <- readLines("subtitle_text.txt")
+
+p_tfidf <- top_10_tfidf %>% 
+  ggplot(aes(x = order, y = tf_idf)) +
+  geom_col(fill = "#F7C03E") +
+  facet_wrap(~section, scales = "free") +
+  scale_x_continuous(breaks = top_10_tfidf$order,
+                     labels = top_10_tfidf$word_lemma) +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = 'Importance of words in "Info We Trust" book sections',
+       subtitle = paste0("\n", str_wrap(subtitle_text, width = 160), "\n", collapse = ""),
+       caption = "Makeover in R by Dmitrijs Kass @dmitrijsk | Data source: https://data.world/makeovermonday/2019w16",
+       x = NULL, 
+       y = NULL) +
+  theme(strip.background = element_blank(), 
+        panel.grid = element_blank(), 
+        plot.background = element_rect(fill = "#2C5696"), 
+        strip.text = element_text(colour = "white", face = "bold", size = 12), 
+        axis.text = element_text(colour = "white"), 
+        title = element_text(colour = "white", size = 15), 
+        plot.subtitle = element_text(colour = "white", size = 9),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(hjust = 0, size = 10), 
+        plot.caption = element_text(size = 8, hjust = 0),
+        panel.spacing.x = unit(2,"line"), 
+        panel.spacing.y = unit(1.5,"line"))
+```
+
+MakeoverMonday 2016/W16 focuses on the words in ["Info We Trust"](https://infowetrust.com/). The original viz is a [word cloud](https://twitter.com/TriMyData/status/1117386318391197698). Data is available [here](https://data.world/makeovermonday/2019w16).
+
+<br>
+
+```{r echo = FALSE, fig.align='left', fig.height=7, fig.width=10}
+p_tfidf
+```
+
