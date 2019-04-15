@@ -98,7 +98,7 @@ p_tfidf <- top_10_tfidf %>%
                      labels = top_10_tfidf$word_lemma) +
   coord_flip() +
   theme_minimal() +
-  labs(title = 'Importance of words in "Info We Trust" book sections',
+  labs(title = "Importance of words in RJ Andrew's book 'Info We Trust'",
        subtitle = paste0("\n", str_wrap(subtitle_text, width = 150), "\n", collapse = ""),
        caption = "Makeover in R by Dmitrijs Kass @dmitrijsk | Data source: https://data.world/makeovermonday/2019w16",
        x = NULL, 
@@ -115,6 +115,8 @@ p_tfidf <- top_10_tfidf %>%
         plot.caption = element_text(size = 8, hjust = 0),
         panel.spacing.x = unit(2,"line"), 
         panel.spacing.y = unit(1.5,"line"))
+
+ggsave(filename = "images-raw/tf_idf.png", height = 7, width = 10)
 ```
 
 This week focuses on the words in RJ Andrew's book ["Info We Trust"](https://infowetrust.com/). The original viz is a [word cloud](https://twitter.com/TriMyData/status/1117386318391197698). Data is available [here](https://data.world/makeovermonday/2019w16). My makeover focuses on the importance of words in six sections of the book. Word importance may be useful in highlighting differences in the content of the book's sections. Data analysis and visualization was implemented in R. Code with explanations will be added later.
